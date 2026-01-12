@@ -76,6 +76,20 @@
             </div>
             <p class="description">Quick add a car with URL and registration, or add full details. All cars are saved automatically.</p>
             
+            <!-- Dataset Selector -->
+            <div class="dataset-selector" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label for="datasetSelect" style="font-weight: 600; color: #666; font-size: 0.95em;">Load Dataset:</label>
+                    <select id="datasetSelect" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer; background: white; min-width: 200px;">
+                        <option value="none">No dataset (start empty)</option>
+                        <option value="dataset-1.json">Dataset 1 (19 cars)</option>
+                        <option value="dataset-2.json">Dataset 2 (10 cars)</option>
+                    </select>
+                    <button id="loadDatasetBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;">Load Dataset</button>
+                    <span id="datasetStatus" style="color: #666; font-size: 0.85em; font-style: italic;"></span>
+                </div>
+            </div>
+            
             <!-- Quick Add Form -->
             <div class="quick-add-section" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
                 <h3 style="margin-bottom: 15px; color: #667eea; font-size: 1.1em;">Quick Add</h3>

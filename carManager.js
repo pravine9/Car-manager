@@ -60,6 +60,22 @@ async function initializeCarManager() {
     await migrateLogsToCars(); // Migrate any existing log entries to cars
     await loadCars();
     setupEventListeners();
+    
+    // Initialize dataset selector with saved preference
+    const savedDataset = await InputStorage.get('selectedDataset');
+    const datasetSelect = document.getElementById('datasetSelect');
+    if (datasetSelect) {
+        if (savedDataset) {
+            datasetSelect.value = savedDataset;
+        } else if (allCars.length === 0) {
+            // If no data and no preference, default to dataset-1.json
+            datasetSelect.value = 'dataset-1.json';
+        } else {
+            // If we have data but no saved preference, set to 'none'
+            datasetSelect.value = 'none';
+        }
+    }
+    
     switchView('card'); // Initialize with card view
     displayCars();
 }
@@ -190,6 +206,33 @@ function setupEventListeners() {
     document.getElementById('exportDataBtn').addEventListener('click', exportData);
     document.getElementById('importDataInput').addEventListener('change', importData);
     
+    // Dataset selector
+    const loadDatasetBtn = document.getElementById('loadDatasetBtn');
+    if (loadDatasetBtn) {
+        loadDatasetBtn.addEventListener('click', async function() {
+            const datasetSelect = document.getElementById('datasetSelect');
+            const selectedDataset = datasetSelect ? datasetSelect.value : 'none';
+            
+            if (selectedDataset === 'none') {
+                if (confirm('Clear all cars and start with an empty collection?')) {
+                    await CarStorage.clear();
+                    allCars = [];
+                    await InputStorage.save('selectedDataset', 'none');
+                    displayCars();
+                    const statusEl = document.getElementById('datasetStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '✓ Cleared all cars';
+                        setTimeout(() => {
+                            statusEl.textContent = '';
+                        }, 3000);
+                    }
+                }
+            } else {
+                await loadDatasetFromFile(selectedDataset, true);
+            }
+        });
+    }
+    
     // Table sorting - use event delegation since table might not exist yet
     document.addEventListener('click', function(e) {
         if (e.target.closest('.sortable')) {
@@ -319,29 +362,98 @@ async function loadCars() {
                     await CarStorage.save(car);
                 }
             } else {
-                // Try to load initial data file for GitHub Pages
-                try {
-                    const response = await fetch('initial-data.json');
-                    if (response.ok) {
-                        const initialData = await response.json();
-                        if (initialData.cars && Array.isArray(initialData.cars) && initialData.cars.length > 0) {
-                            console.log(`Loading ${initialData.cars.length} cars from initial-data.json`);
-                            allCars = initialData.cars;
-                            // Save to IndexedDB
-                            for (const car of allCars) {
-                                await CarStorage.save(car);
-                            }
-                        }
-                    }
-                } catch (fetchError) {
-                    // initial-data.json not found or error loading - this is fine, just start with empty data
-                    console.log('No initial data file found, starting with empty collection');
+                // Check for saved dataset preference
+                const savedDataset = await InputStorage.get('selectedDataset');
+                if (savedDataset && savedDataset !== 'none') {
+                    await loadDatasetFromFile(savedDataset, false);
+                } else {
+                    // Try to load dataset-1.json as default for GitHub Pages
+                    await loadDatasetFromFile('dataset-1.json', false);
+                }
+            }
+        } else {
+            // If we have existing data, restore the dataset selector to match
+            const savedDataset = await InputStorage.get('selectedDataset');
+            if (savedDataset) {
+                const datasetSelect = document.getElementById('datasetSelect');
+                if (datasetSelect) {
+                    datasetSelect.value = savedDataset;
                 }
             }
         }
     } catch (error) {
         console.error('Error loading cars:', error);
         allCars = [];
+    }
+}
+
+// Load dataset from a JSON file
+async function loadDatasetFromFile(filename, showConfirmation = true) {
+    try {
+        const response = await fetch(filename);
+        if (response.ok) {
+            const dataset = await response.json();
+            if (dataset.cars && Array.isArray(dataset.cars) && dataset.cars.length > 0) {
+                if (showConfirmation) {
+                    if (!confirm(`This will replace all current cars with ${dataset.cars.length} cars from ${filename}. Continue?`)) {
+                        return;
+                    }
+                }
+                
+                // Clear existing data
+                await CarStorage.clear();
+                allCars = [];
+                
+                // Load new dataset
+                allCars = dataset.cars;
+                
+                // Save to IndexedDB
+                for (const car of allCars) {
+                    await CarStorage.save(car);
+                }
+                
+                // Save dataset preference
+                await InputStorage.save('selectedDataset', filename);
+                
+                // Update selector
+                const datasetSelect = document.getElementById('datasetSelect');
+                if (datasetSelect) {
+                    datasetSelect.value = filename;
+                }
+                
+                // Show status
+                const statusEl = document.getElementById('datasetStatus');
+                if (statusEl) {
+                    statusEl.textContent = `✓ Loaded ${dataset.cars.length} cars from ${filename}`;
+                    setTimeout(() => {
+                        statusEl.textContent = '';
+                    }, 3000);
+                }
+                
+                // Refresh display
+                displayCars();
+                
+                console.log(`Loaded ${dataset.cars.length} cars from ${filename}`);
+                return true;
+            }
+        } else {
+            throw new Error(`Failed to load ${filename}: ${response.status}`);
+        }
+    } catch (error) {
+        console.error(`Error loading dataset ${filename}:`, error);
+        const statusEl = document.getElementById('datasetStatus');
+        if (statusEl) {
+            statusEl.textContent = `✗ Error loading ${filename}`;
+            statusEl.style.color = '#e74c3c';
+            setTimeout(() => {
+                statusEl.textContent = '';
+                statusEl.style.color = '';
+            }, 3000);
+        }
+        if (showConfirmation) {
+            alert(`Error loading dataset: ${error.message}`);
+        }
+        return false;
     }
 }
 
