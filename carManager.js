@@ -318,6 +318,25 @@ async function loadCars() {
                 for (const car of allCars) {
                     await CarStorage.save(car);
                 }
+            } else {
+                // Try to load initial data file for GitHub Pages
+                try {
+                    const response = await fetch('initial-data.json');
+                    if (response.ok) {
+                        const initialData = await response.json();
+                        if (initialData.cars && Array.isArray(initialData.cars) && initialData.cars.length > 0) {
+                            console.log(`Loading ${initialData.cars.length} cars from initial-data.json`);
+                            allCars = initialData.cars;
+                            // Save to IndexedDB
+                            for (const car of allCars) {
+                                await CarStorage.save(car);
+                            }
+                        }
+                    }
+                } catch (fetchError) {
+                    // initial-data.json not found or error loading - this is fine, just start with empty data
+                    console.log('No initial data file found, starting with empty collection');
+                }
             }
         }
     } catch (error) {
