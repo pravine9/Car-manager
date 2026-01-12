@@ -1,5 +1,7 @@
 # Car Tools - Vehicle Checker & Link Manager
 
+<!-- Updated for GitHub Pages deployment -->
+
 A comprehensive web application for managing car-related information with powerful features for tracking and evaluating vehicles.
 
 ## Features
