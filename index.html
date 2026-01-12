@@ -123,8 +123,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span style="font-weight: 600; color: #666;">View:</span>
-                        <button id="cardViewBtn" class="btn-view-toggle active" data-view="card">Card View</button>
-                        <button id="tableViewBtn" class="btn-view-toggle" data-view="table">Table View</button>
+                        <button id="tableViewBtn" class="btn-view-toggle active" data-view="table">Table View</button>
+                        <button id="cardViewBtn" class="btn-view-toggle" data-view="card">Card View</button>
                     </div>
                     <div id="viewStats" style="color: #666; font-size: 0.9em;">
                         <span id="carsCount">0</span> cars
@@ -251,12 +251,12 @@
             </div>
 
             <!-- Cars List (Card View) -->
-            <div id="carsList" class="cars-list">
+            <div id="carsList" class="cars-list" style="display: none;">
                 <p class="empty-message" id="emptyCarsMessage">No cars added yet. Use Quick Add above or click "Add Full Details" to get started!</p>
             </div>
             
             <!-- Cars Table (Table View) -->
-            <div id="carsTableContainer" class="cars-table-container" style="display: none;">
+            <div id="carsTableContainer" class="cars-table-container">
                 <div class="table-wrapper" style="overflow-x: auto; overflow-y: visible; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
                     <table id="carsTable" class="cars-table">
                         <thead>

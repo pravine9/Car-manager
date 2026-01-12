@@ -2,7 +2,7 @@
 
 let currentEditingCarId = null;
 let allCars = [];
-let currentView = 'card'; // 'card' or 'table'
+let currentView = 'table'; // 'card' or 'table'
 let currentFilters = {
     star: 'all',
     flag: 'all',
@@ -76,7 +76,7 @@ async function initializeCarManager() {
         }
     }
     
-    switchView('card'); // Initialize with card view
+    switchView('table'); // Initialize with table view
     displayCars();
 }
 
