@@ -24,6 +24,33 @@ const CAR_FORM_FIELDS = [
 // Fields that should NOT have the incomplete indicator
 const EXCLUDE_FROM_HIGHLIGHT = ['carVehicleScore', 'carWebsiteLink'];
 
+// Function to update field visual state (moved outside setupEventListeners for global access)
+function updateFieldVisualState(input) {
+    // Skip fields that shouldn't be highlighted
+    if (EXCLUDE_FROM_HIGHLIGHT.includes(input.id)) {
+        input.classList.remove('field-incomplete');
+        return;
+    }
+    
+    // Check if field has a value - handle different input types
+    let hasValue = false;
+    if (input.type === 'number') {
+        hasValue = input.value !== '' && input.value !== null && !isNaN(parseFloat(input.value));
+    } else if (input.tagName === 'SELECT') {
+        hasValue = input.value !== '' && input.value !== null;
+    } else {
+        hasValue = input.value && input.value.trim() !== '';
+    }
+    
+    if (hasValue) {
+        input.classList.remove('field-incomplete');
+    } else if (document.activeElement !== input) {
+        input.classList.add('field-incomplete');
+    } else {
+        input.classList.remove('field-incomplete');
+    }
+}
+
 // Initialize car manager
 document.addEventListener('DOMContentLoaded', function() {
     initializeCarManager();
@@ -205,33 +232,6 @@ function setupEventListeners() {
     // Auto-save on input (debounced) and update visual indicators
     let saveTimeout;
     
-    // Function to update field visual state
-    function updateFieldVisualState(input) {
-        // Skip fields that shouldn't be highlighted
-        if (EXCLUDE_FROM_HIGHLIGHT.includes(input.id)) {
-            input.classList.remove('field-incomplete');
-            return;
-        }
-        
-        // Check if field has a value - handle different input types
-        let hasValue = false;
-        if (input.type === 'number') {
-            hasValue = input.value !== '' && input.value !== null && !isNaN(parseFloat(input.value));
-        } else if (input.tagName === 'SELECT') {
-            hasValue = input.value !== '' && input.value !== null;
-        } else {
-            hasValue = input.value && input.value.trim() !== '';
-        }
-        
-        if (hasValue) {
-            input.classList.remove('field-incomplete');
-        } else if (document.activeElement !== input) {
-            input.classList.add('field-incomplete');
-        } else {
-            input.classList.remove('field-incomplete');
-        }
-    }
-    
     // Setup form field listeners
     CAR_FORM_FIELDS.forEach(inputId => {
         const input = document.getElementById(inputId);
@@ -265,22 +265,26 @@ function setupEventListeners() {
     // Scroll to top button functionality
     const scrollToTopBtn = document.getElementById('scrollToTopBtn');
     
-    // Show/hide scroll to top button based on scroll position
-    window.addEventListener('scroll', function() {
-        if (window.pageYOffset > 300) {
-            scrollToTopBtn.classList.add('show');
-        } else {
-            scrollToTopBtn.classList.remove('show');
-        }
-    });
-    
-    // Scroll to top when button is clicked
-    scrollToTopBtn.addEventListener('click', function() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
+    if (scrollToTopBtn) {
+        // Show/hide scroll to top button based on scroll position
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
         });
-    });
+        
+        // Scroll to top when button is clicked
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    } else {
+        console.warn('scrollToTopBtn element not found');
+    }
     
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
@@ -456,12 +460,14 @@ function updateSortIndicators() {
         const column = header.getAttribute('data-column');
         const indicator = header.querySelector('.sort-indicator');
         
-        if (currentSort.column === column) {
-            indicator.textContent = currentSort.direction === 'asc' ? ' ↑' : ' ↓';
-            header.classList.add('sort-active');
-        } else {
-            indicator.textContent = '';
-            header.classList.remove('sort-active');
+        if (indicator) {
+            if (currentSort.column === column) {
+                indicator.textContent = currentSort.direction === 'asc' ? ' ↑' : ' ↓';
+                header.classList.add('sort-active');
+            } else {
+                indicator.textContent = '';
+                header.classList.remove('sort-active');
+            }
         }
     });
 }
@@ -598,17 +604,18 @@ function displayCarsCards(filteredCars) {
 
 // Helper function to attach action listeners for a car (works for both card and table views)
 function attachCarActionListeners(car, viewType = 'card') {
-    const prefix = viewType === 'card' ? '' : 'table-';
     const baseSelector = `[data-car-id="${car.id}"]`;
     
-    // Edit button
-    const editBtn = document.querySelector(`${baseSelector} .${prefix}edit-btn`);
+    // Edit button - card uses 'edit-car-btn', table uses 'table-edit-btn'
+    const editBtnSelector = viewType === 'card' ? '.edit-car-btn' : '.table-edit-btn';
+    const editBtn = document.querySelector(`${baseSelector} ${editBtnSelector}`);
     if (editBtn) {
         editBtn.addEventListener('click', () => editCar(car.id));
     }
     
-    // Delete button
-    const deleteBtn = document.querySelector(`${baseSelector} .${prefix}delete-btn`);
+    // Delete button - card uses 'delete-car-btn', table uses 'table-delete-btn'
+    const deleteBtnSelector = viewType === 'card' ? '.delete-car-btn' : '.table-delete-btn';
+    const deleteBtn = document.querySelector(`${baseSelector} ${deleteBtnSelector}`);
     if (deleteBtn) {
         deleteBtn.addEventListener('click', (e) => {
             if (viewType === 'card') {
@@ -619,8 +626,9 @@ function attachCarActionListeners(car, viewType = 'card') {
         });
     }
     
-    // Star button
-    const starBtn = document.querySelector(`${baseSelector} .${prefix}star-btn`);
+    // Star button - card uses 'star-car-btn', table uses 'table-star-btn'
+    const starBtnSelector = viewType === 'card' ? '.star-car-btn' : '.table-star-btn';
+    const starBtn = document.querySelector(`${baseSelector} ${starBtnSelector}`);
     if (starBtn) {
         starBtn.addEventListener('click', (e) => {
             if (viewType === 'card') {
@@ -631,8 +639,9 @@ function attachCarActionListeners(car, viewType = 'card') {
         });
     }
     
-    // Flag button
-    const flagBtn = document.querySelector(`${baseSelector} .${prefix}flag-btn`);
+    // Flag button - card uses 'flag-car-btn', table uses 'table-flag-btn'
+    const flagBtnSelector = viewType === 'card' ? '.flag-car-btn' : '.table-flag-btn';
+    const flagBtn = document.querySelector(`${baseSelector} ${flagBtnSelector}`);
     if (flagBtn) {
         flagBtn.addEventListener('click', (e) => {
             if (viewType === 'card') {
@@ -643,16 +652,18 @@ function attachCarActionListeners(car, viewType = 'card') {
         });
     }
     
-    // Vehicle score button
-    const vehicleScoreBtn = document.querySelector(`${baseSelector} .${prefix}vehicle-score-btn`);
+    // Vehicle score button - card uses 'open-vehicle-score-btn', table uses 'table-vehicle-score-btn'
+    const vehicleScoreBtnSelector = viewType === 'card' ? '.open-vehicle-score-btn' : '.table-vehicle-score-btn';
+    const vehicleScoreBtn = document.querySelector(`${baseSelector} ${vehicleScoreBtnSelector}`);
     if (vehicleScoreBtn && car.vehicleScore) {
         vehicleScoreBtn.addEventListener('click', () => {
             if (car.vehicleScore) CarUtils.openInRightWindow(car.vehicleScore);
         });
     }
     
-    // Website link button
-    const websiteLinkBtn = document.querySelector(`${baseSelector} .${prefix}website-link-btn`);
+    // Website link button - card uses 'open-website-link-btn', table uses 'table-website-link-btn'
+    const websiteLinkBtnSelector = viewType === 'card' ? '.open-website-link-btn' : '.table-website-link-btn';
+    const websiteLinkBtn = document.querySelector(`${baseSelector} ${websiteLinkBtnSelector}`);
     if (websiteLinkBtn && car.websiteLink) {
         websiteLinkBtn.addEventListener('click', () => {
             if (car.websiteLink) CarUtils.openInRightWindow(car.websiteLink);

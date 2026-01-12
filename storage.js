@@ -284,7 +284,11 @@ const InputStorage = {
             await initDB();
             const transaction = db.transaction([STORE_INPUTS], 'readwrite');
             const store = transaction.objectStore(STORE_INPUTS);
-            await store.put({ key, value });
+            const request = store.put({ key, value });
+            await new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
         } catch (error) {
             console.error('Error saving input:', error);
             const inputs = JSON.parse(localStorage.getItem('carToolInputs') || '{}');

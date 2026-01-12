@@ -1,6 +1,3 @@
-// Use shared utility from utils.js
-const openInRightWindow = (url) => CarUtils.openInRightWindow(url);
-
 // Paste from clipboard function
 async function pasteFromClipboard(inputElement) {
     try {
@@ -45,108 +42,161 @@ async function pasteFromClipboard(inputElement) {
     }
 }
 
-// Feature 1: VehicleScore Checker
-// Paste button for registration input
-document.getElementById('pasteRegistrationBtn').addEventListener('click', async function() {
-    const input = document.getElementById('registrationInput');
-    await pasteFromClipboard(input);
-});
-
-document.getElementById('checkScoreBtn').addEventListener('click', function() {
-    const registration = document.getElementById('registrationInput').value.trim().toUpperCase();
-    
-    if (!registration) {
-        alert('Please enter a registration number');
-        return;
+// Setup event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Feature 1: VehicleScore Checker
+    // Paste button for registration input
+    const pasteRegistrationBtn = document.getElementById('pasteRegistrationBtn');
+    if (pasteRegistrationBtn) {
+        pasteRegistrationBtn.addEventListener('click', async function() {
+            const input = document.getElementById('registrationInput');
+            await pasteFromClipboard(input);
+        });
     }
     
-    // Clean the registration (remove spaces)
-    const cleanReg = CarUtils.normalizeRegistration(registration);
-    const url = `https://vehiclescore.co.uk/score?registration=${cleanReg}`;
-    
-    // Open in new window on right half of screen
-    CarUtils.openInRightWindow(url);
-    
-    // Auto-fill registration in Quick Add form (Step 3)
-    const quickRegInput = document.getElementById('quickRegInput');
-    if (quickRegInput) {
-        quickRegInput.value = cleanReg;
+    const checkScoreBtn = document.getElementById('checkScoreBtn');
+    if (checkScoreBtn) {
+        checkScoreBtn.addEventListener('click', function() {
+            const registration = document.getElementById('registrationInput').value.trim().toUpperCase();
+            
+            if (!registration) {
+                alert('Please enter a registration number');
+                return;
+            }
+            
+            // Clean the registration (remove spaces)
+            const cleanReg = CarUtils.normalizeRegistration(registration);
+            const url = `https://vehiclescore.co.uk/score?registration=${cleanReg}`;
+            
+            // Open in new window on right half of screen
+            CarUtils.openInRightWindow(url);
+            
+            // Auto-fill registration in Quick Add form (Step 3)
+            const quickRegInput = document.getElementById('quickRegInput');
+            if (quickRegInput) {
+                quickRegInput.value = cleanReg;
+            }
+            
+            saveInputs();
+        });
     }
     
-    saveInputs();
-});
-
-// Allow Enter key to trigger the button
-document.getElementById('registrationInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        document.getElementById('checkScoreBtn').click();
-    }
-});
-
-// Use shared utility from utils.js
-const cleanCarListingUrl = (url) => CarUtils.cleanCarListingUrl(url);
-
-// Feature 2: URL Cleaner (Autotrader and Motors.co.uk)
-// Paste button for URL input
-document.getElementById('pasteUrlBtn').addEventListener('click', async function() {
-    const input = document.getElementById('autotraderUrlInput');
-    await pasteFromClipboard(input);
-});
-
-document.getElementById('cleanUrlBtn').addEventListener('click', function() {
-    const url = document.getElementById('autotraderUrlInput').value.trim();
-    
-    if (!url) {
-        alert('Please enter an Autotrader or Motors.co.uk URL');
-        return;
-    }
-    
-    const cleanedUrl = CarUtils.cleanCarListingUrl(url);
-    
-    if (cleanedUrl) {
-        // Display the cleaned URL
-        const outputBox = document.getElementById('cleanedUrlOutput');
-        const linkElement = document.getElementById('cleanedUrlLink');
+    // Allow Enter key to trigger the button
+    const registrationInput = document.getElementById('registrationInput');
+    if (registrationInput) {
+        registrationInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const btn = document.getElementById('checkScoreBtn');
+                if (btn) btn.click();
+            }
+        });
         
-        linkElement.href = cleanedUrl;
-        linkElement.textContent = cleanedUrl;
-        outputBox.style.display = 'block';
+        registrationInput.addEventListener('focus', function() {
+            this.select();
+        });
         
-        // Open the cleaned URL in a new window on right half of screen
-        CarUtils.openInRightWindow(cleanedUrl);
-        
-        // Auto-fill URL in Quick Add form (Step 3)
-        const quickUrlInput = document.getElementById('quickUrlInput');
-        if (quickUrlInput) {
-            quickUrlInput.value = cleanedUrl;
-        }
-        
-        saveInputs();
-    } else {
-        alert('URL cleaner only works for Autotrader or Motors.co.uk links. Please enter a valid URL from one of these sites.');
+        registrationInput.addEventListener('input', saveInputs);
     }
-});
-
-// Copy cleaned URL button
-document.getElementById('copyUrlBtn').addEventListener('click', function() {
-    const url = document.getElementById('cleanedUrlLink').textContent;
-    navigator.clipboard.writeText(url).then(function() {
-        CarUtils.showButtonFeedback(document.getElementById('copyUrlBtn'), 'Copied!');
-    });
-});
-
-// Allow Enter key to trigger the clean button
-document.getElementById('autotraderUrlInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        document.getElementById('cleanUrlBtn').click();
+    
+    // Feature 2: URL Cleaner (Autotrader and Motors.co.uk)
+    // Paste button for URL input
+    const pasteUrlBtn = document.getElementById('pasteUrlBtn');
+    if (pasteUrlBtn) {
+        pasteUrlBtn.addEventListener('click', async function() {
+            const input = document.getElementById('autotraderUrlInput');
+            await pasteFromClipboard(input);
+        });
     }
+    
+    const cleanUrlBtn = document.getElementById('cleanUrlBtn');
+    if (cleanUrlBtn) {
+        cleanUrlBtn.addEventListener('click', function() {
+            const url = document.getElementById('autotraderUrlInput').value.trim();
+            
+            if (!url) {
+                alert('Please enter an Autotrader or Motors.co.uk URL');
+                return;
+            }
+            
+            const cleanedUrl = CarUtils.cleanCarListingUrl(url);
+            
+            if (cleanedUrl) {
+                // Display the cleaned URL
+                const outputBox = document.getElementById('cleanedUrlOutput');
+                const linkElement = document.getElementById('cleanedUrlLink');
+                
+                if (linkElement) {
+                    linkElement.href = cleanedUrl;
+                    linkElement.textContent = cleanedUrl;
+                }
+                if (outputBox) {
+                    outputBox.style.display = 'block';
+                }
+                
+                // Open the cleaned URL in a new window on right half of screen
+                CarUtils.openInRightWindow(cleanedUrl);
+                
+                // Auto-fill URL in Quick Add form (Step 3)
+                const quickUrlInput = document.getElementById('quickUrlInput');
+                if (quickUrlInput) {
+                    quickUrlInput.value = cleanedUrl;
+                }
+                
+                saveInputs();
+            } else {
+                alert('URL cleaner only works for Autotrader or Motors.co.uk links. Please enter a valid URL from one of these sites.');
+            }
+        });
+    }
+    
+    // Copy cleaned URL button
+    const copyUrlBtn = document.getElementById('copyUrlBtn');
+    if (copyUrlBtn) {
+        copyUrlBtn.addEventListener('click', function() {
+            const linkElement = document.getElementById('cleanedUrlLink');
+            if (linkElement) {
+                const url = linkElement.textContent;
+                navigator.clipboard.writeText(url).then(function() {
+                    CarUtils.showButtonFeedback(copyUrlBtn, 'Copied!');
+                });
+            }
+        });
+    }
+    
+    // Allow Enter key to trigger the clean button
+    const autotraderUrlInput = document.getElementById('autotraderUrlInput');
+    if (autotraderUrlInput) {
+        autotraderUrlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const btn = document.getElementById('cleanUrlBtn');
+                if (btn) btn.click();
+            }
+        });
+        
+        autotraderUrlInput.addEventListener('focus', function() {
+            this.select();
+        });
+        
+        autotraderUrlInput.addEventListener('input', saveInputs);
+    }
+    
+    // Initialize: Load inputs on page load
+    (async function() {
+        await loadInputs();
+    })();
 });
 
 // Save input values to storage (for URL cleaner and vehicle score checker)
 async function saveInputs() {
     try {
-        await InputStorage.save('registration', document.getElementById('registrationInput').value);
-        await InputStorage.save('autotraderUrl', document.getElementById('autotraderUrlInput').value);
+        const regInput = document.getElementById('registrationInput');
+        const urlInput = document.getElementById('autotraderUrlInput');
+        if (regInput) {
+            await InputStorage.save('registration', regInput.value);
+        }
+        if (urlInput) {
+            await InputStorage.save('autotraderUrl', urlInput.value);
+        }
     } catch (error) {
         console.error('Error saving inputs:', error);
     }
@@ -156,8 +206,14 @@ async function saveInputs() {
 async function loadInputs() {
     try {
         const inputs = await InputStorage.getAll();
-        if (inputs.registration) document.getElementById('registrationInput').value = inputs.registration;
-        if (inputs.autotraderUrl) document.getElementById('autotraderUrlInput').value = inputs.autotraderUrl;
+        const regInput = document.getElementById('registrationInput');
+        const urlInput = document.getElementById('autotraderUrlInput');
+        if (regInput && inputs.registration) {
+            regInput.value = inputs.registration;
+        }
+        if (urlInput && inputs.autotraderUrl) {
+            urlInput.value = inputs.autotraderUrl;
+        }
     } catch (error) {
         console.error('Error loading inputs:', error);
     }
@@ -182,21 +238,3 @@ function copyLogUrl(url, buttonElement) {
         alert('Failed to copy URL. Please try again.');
     });
 }
-
-// Auto-select text when clicking on input fields
-document.getElementById('registrationInput').addEventListener('focus', function() {
-    this.select();
-});
-
-document.getElementById('autotraderUrlInput').addEventListener('focus', function() {
-    this.select();
-});
-
-// Save inputs on change
-document.getElementById('registrationInput').addEventListener('input', saveInputs);
-document.getElementById('autotraderUrlInput').addEventListener('input', saveInputs);
-
-// Initialize: Load inputs on page load
-(async function() {
-    await loadInputs();
-})();
