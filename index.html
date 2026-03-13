@@ -3,298 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Tools - Vehicle Checker & Link Manager</title>
+    <title>Car Tracker</title>
+    <meta name="description" content="Track and shortlist cars you're looking to buy, with DVLA data auto-fill.">
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/dexie@4/dist/dexie.min.js"></script>
+    <script defer src="vehicleTaxRates.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🚗 Car Tools</h1>
-            <p>Vehicle Score Checker & AutoTrader Link Manager</p>
-        </header>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
 
-        <!-- Feature 1: VehicleScore Checker -->
-        <section class="feature-section">
-            <h2>1. Vehicle Score Checker</h2>
-            <p class="description">Enter a UK car registration number to check its score on VehicleScore</p>
-            <div class="input-group">
-                <div style="display: flex; gap: 5px; flex: 1;">
-                    <input 
-                        type="text" 
-                        id="registrationInput" 
-                        placeholder="Enter registration (e.g., DG13PFK)"
-                        maxlength="10"
-                        style="flex: 1;"
-                    >
-                    <button id="pasteRegistrationBtn" class="btn-paste" title="Paste from clipboard">📋</button>
-                </div>
-                <button id="checkScoreBtn" class="btn btn-primary">Check Score</button>
-            </div>
-        </section>
+<div x-data="carTracker" class="max-w-[1440px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
 
-        <!-- Feature 2: URL Cleaner -->
-        <section class="feature-section">
-            <h2>2. URL Cleaner</h2>
-            <p class="description">Paste a long Autotrader or Motors.co.uk URL to get the clean, shortened version</p>
-            <div class="input-group">
-                <div style="display: flex; gap: 5px; flex: 1;">
-                    <input 
-                        type="text" 
-                        id="autotraderUrlInput" 
-                        placeholder="Paste Autotrader or Motors.co.uk URL here"
-                        style="flex: 1;"
-                    >
-                    <button id="pasteUrlBtn" class="btn-paste" title="Paste from clipboard">📋</button>
-                </div>
-                <button id="cleanUrlBtn" class="btn btn-secondary">Clean URL</button>
-            </div>
-            <div id="cleanedUrlOutput" class="output-box" style="display: none;">
-                <p><strong>Cleaned URL:</strong></p>
-                <a id="cleanedUrlLink" href="#" target="_blank" class="cleaned-link"></a>
-                <button id="copyUrlBtn" class="btn btn-small">Copy</button>
-            </div>
-        </section>
+    <!-- ═══ Header ═══ -->
+    <header class="text-center mb-8">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">🚗 Car Tracker</h1>
+        <p class="text-slate-500 text-sm font-medium">Track &amp; shortlist cars with DVLA data</p>
+    </header>
 
-        <!-- Feature 3: Car Management (Unified) -->
-        <section class="feature-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                <h2>3. Car Management</h2>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <input 
-                        type="text" 
-                        id="searchCarsInput" 
-                        placeholder="Search cars..." 
-                        style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em;"
-                    >
-                    <button id="addNewCarBtn" class="btn btn-primary">+ Add Full Details</button>
-                    <button id="exportDataBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9em;">Export Data</button>
-                    <label for="importDataInput" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9em; cursor: pointer; margin: 0;">
-                        Import Data
-                        <input type="file" id="importDataInput" accept=".json" style="display: none;">
-                    </label>
-                </div>
+    <!-- ═══ Quick Add ═══ -->
+    <div class="max-w-lg mx-auto mb-10 text-center">
+        <div class="bg-white border-2 border-slate-200 rounded-xl p-5 sm:p-6 shadow-sm group hover:border-teal-400 transition-all duration-300">
+            <label class="block text-xs font-bold text-teal-800 uppercase tracking-widest mb-3">Vehicle Registration</label>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <input type="text" x-model="quickReg" x-ref="quickRegInput" x-init="$el.focus()" 
+                       placeholder="e.g. HJ15 CDO" maxlength="10"
+                       @keydown.enter="quickAdd()"
+                       class="w-full sm:w-48 px-4 py-2 border-2 border-teal-50 rounded-lg text-lg uppercase font-mono font-bold tracking-wider text-center focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white transition-all placeholder:font-normal placeholder:text-slate-300">
+                <button @click="quickAdd()" :disabled="loading"
+                        class="w-full sm:w-auto px-6 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-sm rounded-lg transition-all shadow-sm hover:shadow-teal-200 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer whitespace-nowrap">
+                    <span x-show="!loading">Add Car</span>
+                    <span x-show="loading">...</span>
+                </button>
             </div>
-            <p class="description">Quick add a car with URL and registration, or add full details. All cars are saved automatically.</p>
-            
-            <!-- Dataset Selector -->
-            <div class="dataset-selector" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <label for="datasetSelect" style="font-weight: 600; color: #666; font-size: 0.95em;">Load Dataset:</label>
-                    <select id="datasetSelect" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer; background: white; min-width: 200px;">
-                        <option value="none">No dataset (start empty)</option>
-                        <option value="dataset-1.json">Dataset 1 (19 cars)</option>
-                        <option value="dataset-2.json">Dataset 2 (10 cars)</option>
-                    </select>
-                    <button id="loadDatasetBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;">Load Dataset</button>
-                    <span id="datasetStatus" style="color: #666; font-size: 0.85em; font-style: italic;"></span>
-                </div>
-            </div>
-            
-            <!-- Quick Add Form -->
-            <div class="quick-add-section" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
-                <h3 style="margin-bottom: 15px; color: #667eea; font-size: 1.1em;">Quick Add</h3>
-                <div class="log-input-group" style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; align-items: end;">
-                    <div>
-                        <label for="quickUrlInput" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; color: #666;">Website URL</label>
-                        <input 
-                            type="text" 
-                            id="quickUrlInput" 
-                            placeholder="Autotrader or Motors.co.uk URL"
-                            style="width: 100%;"
-                        >
-                    </div>
-                    <div>
-                        <label for="quickRegInput" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9em; color: #666;">Registration *</label>
-                        <input 
-                            type="text" 
-                            id="quickRegInput" 
-                            placeholder="e.g., CX66 NWO"
-                            maxlength="10"
-                            style="width: 100%;"
-                        >
-                    </div>
-                    <button id="quickAddBtn" class="btn btn-primary" style="height: fit-content;">Quick Add</button>
-                </div>
-                <p style="margin-top: 10px; font-size: 0.85em; color: #999; font-style: italic;">Quick add creates a basic entry. Click "Edit" to add full details.</p>
-            </div>
-            
-            <!-- View Toggle and Filters -->
-            <div class="view-controls" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <span style="font-weight: 600; color: #666;">View:</span>
-                        <button id="tableViewBtn" class="btn-view-toggle active" data-view="table">Table View</button>
-                        <button id="cardViewBtn" class="btn-view-toggle" data-view="card">Card View</button>
-                    </div>
-                    <div id="viewStats" style="color: #666; font-size: 0.9em;">
-                        <span id="carsCount">0</span> cars
-                    </div>
-                </div>
-                
-                <!-- Filters (shown in both views) -->
-                <div class="filters-section" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                    <span style="font-weight: 600; color: #666; margin-right: 5px;">Filters:</span>
-                    <select id="filterStar" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
-                        <option value="all">All Stars</option>
-                        <option value="starred">Starred (Shortlist)</option>
-                        <option value="unstarred">Not Starred</option>
-                    </select>
-                    <select id="filterFlag" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
-                        <option value="all">All Flags</option>
-                        <option value="flagged">Flagged</option>
-                        <option value="unflagged">No Flag</option>
-                    </select>
-                    <select id="filterTransmission" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
-                        <option value="all">All Transmission</option>
-                        <option value="Automatic">Automatic</option>
-                        <option value="Manual">Manual</option>
-                    </select>
-                    <select id="filterFuelType" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
-                        <option value="all">All Fuel Types</option>
-                        <option value="Petrol">Petrol</option>
-                        <option value="Diesel">Diesel</option>
-                    </select>
-                    <button id="clearFiltersBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.9em;">Clear Filters</button>
-                </div>
-            </div>
-            
-            <!-- Car Details Form (initially hidden) -->
-            <div id="carDetailsForm" class="car-details-form" style="display: none;">
-                <h3 id="formTitle">Add New Car</h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="carRegistration">Registration *</label>
-                        <input type="text" id="carRegistration" placeholder="e.g., CX66 NWO" maxlength="10">
-                    </div>
-                    <div class="form-group">
-                        <label for="carYear">Year</label>
-                        <input type="text" id="carYear" placeholder="e.g., 2016 or 65">
-                    </div>
-                    <div class="form-group">
-                        <label for="carSpec">Spec</label>
-                        <input type="text" id="carSpec" placeholder="TDI Ultra Sport S Tronic">
-                    </div>
-                    <div class="form-group">
-                        <label for="carPrice">Price (£)</label>
-                        <input type="number" id="carPrice" placeholder="9999.00" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label for="carEngineSize">Engine Size (L)</label>
-                        <input type="number" id="carEngineSize" placeholder="2.0" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="carMileage">Mileage</label>
-                        <input type="number" id="carMileage" placeholder="87400" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label for="carTransmission">Transmission</label>
-                        <select id="carTransmission">
-                            <option value="Automatic" selected>Automatic</option>
-                            <option value="Manual">Manual</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="carFuelType">Fuel Type</label>
-                        <select id="carFuelType">
-                            <option value="Petrol" selected>Petrol</option>
-                            <option value="Diesel">Diesel</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="carColors">Exterior/Interior</label>
-                        <input type="text" id="carColors" placeholder="Silver/Black">
-                    </div>
-                    <div class="form-group">
-                        <label for="carInsuranceGroup">Insurance Group</label>
-                        <input type="number" id="carInsuranceGroup" placeholder="20">
-                    </div>
-                    <div class="form-group">
-                        <label for="carRating">Rating</label>
-                        <select id="carRating">
-                            <option value="">No rating</option>
-                            <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
-                            <option value="4">⭐⭐⭐⭐ (4 - Very Good)</option>
-                            <option value="3">⭐⭐⭐ (3 - Good)</option>
-                            <option value="2">⭐⭐ (2 - Fair)</option>
-                            <option value="1">⭐ (1 - Poor)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="carContact">Contact/Dealer</label>
-                        <input type="text" id="carContact" placeholder="Dealer name or contact">
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="carComments">Comments</label>
-                        <textarea id="carComments" rows="3" placeholder="Clean MOT, good service history..."></textarea>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="carVehicleScore">Vehicle Score Link</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="url" id="carVehicleScore" placeholder="https://vehiclescore.co.uk/..." style="flex: 1;">
-                            <button type="button" id="openVehicleScoreBtn" class="btn btn-secondary" style="white-space: nowrap;">Open Link</button>
-                        </div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="carWebsiteLink">Website Link</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="url" id="carWebsiteLink" placeholder="https://www.autotrader.co.uk/..." style="flex: 1;">
-                            <button type="button" id="cleanWebsiteUrlBtn" class="btn btn-secondary" style="white-space: nowrap;">Clean URL</button>
-                            <button type="button" id="openWebsiteLinkBtn" class="btn btn-secondary" style="white-space: nowrap;">Open Link</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button id="saveCarBtn" class="btn btn-primary">Save Car</button>
-                    <button id="cancelCarBtn" class="btn btn-secondary">Cancel</button>
-                    <button id="deleteCarBtn" class="btn btn-danger" style="display: none;">Delete Car</button>
-                </div>
-            </div>
-
-            <!-- Cars List (Card View) -->
-            <div id="carsList" class="cars-list" style="display: none;">
-                <p class="empty-message" id="emptyCarsMessage">No cars added yet. Use Quick Add above or click "Add Full Details" to get started!</p>
-            </div>
-            
-            <!-- Cars Table (Table View) -->
-            <div id="carsTableContainer" class="cars-table-container">
-                <div class="table-wrapper" style="overflow-x: auto; overflow-y: visible; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
-                    <table id="carsTable" class="cars-table">
-                        <thead>
-                            <tr>
-                                <th class="sticky-col">⭐</th>
-                                <th class="sticky-col">🚩</th>
-                                <th class="sortable" data-column="registration">Registration <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="year">Year <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="spec">Spec <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="price">Price <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="mileage">Mileage <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="engineSize">Engine <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="transmission">Transmission <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="fuelType">Fuel <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="colors">Colors <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="insuranceGroup">Insurance Group <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="rating">Rating <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="contact">Contact <span class="sort-indicator"></span></th>
-                                <th class="sortable" data-column="comments">Comments <span class="sort-indicator"></span></th>
-                                <th>Website</th>
-                                <th>Vehicle Score</th>
-                                <th class="sticky-col-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="carsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+        </div>
     </div>
 
-    <!-- Floating Scroll to Top Button -->
-    <button id="scrollToTopBtn" class="scroll-to-top-btn" title="Scroll to top">↑</button>
+    <!-- ═══ Toolbar ═══ -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <!-- Search -->
+            <div class="relative flex-1 sm:flex-none">
+                <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" x-model="search" placeholder="Search…" class="w-full sm:w-52 pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+            </div>
+            <span class="text-xs text-slate-400 font-medium whitespace-nowrap" x-text="filteredCars.length + ' of ' + cars.length + ' cars'"></span>
+        </div>
+        <div class="flex gap-2">
+            <button @click="openAdd()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">+ Add</button>
+            <button @click="exportData()" class="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-sm font-medium rounded-lg transition cursor-pointer">Export</button>
+            <label class="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-sm font-medium rounded-lg transition cursor-pointer">
+                Import
+                <input type="file" accept=".json" @change="importData($event)" class="hidden">
+            </label>
+        </div>
+    </div>
 
-    <script src="storage.js"></script>
-    <script src="utils.js"></script>
-    <script src="script.js"></script>
-    <script src="carManager.js"></script>
+    <!-- ═══ Table ═══ -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto" style="max-height:75vh; overflow-y:auto;">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-3 py-3 w-10 text-center">⭐</th>
+                        <th @click="toggleSort('registration')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Reg <span class="text-teal-600" x-text="sortIcon('registration')"></span>
+                        </th>
+                        <th @click="toggleSort('make')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Make <span class="text-teal-600" x-text="sortIcon('make')"></span>
+                        </th>
+                        <th @click="toggleSort('year')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Year <span class="text-teal-600" x-text="sortIcon('year')"></span>
+                        </th>
+                        <th @click="toggleSort('fuelType')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Fuel <span class="text-teal-600" x-text="sortIcon('fuelType')"></span>
+                        </th>
+                        <th @click="toggleSort('engineCapacity')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Engine <span class="text-teal-600" x-text="sortIcon('engineCapacity')"></span>
+                        </th>
+                        <th @click="toggleSort('colour')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Colour <span class="text-teal-600" x-text="sortIcon('colour')"></span>
+                        </th>
+                        <th @click="toggleSort('price')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Price <span class="text-teal-600" x-text="sortIcon('price')"></span>
+                        </th>
+                        <th @click="toggleSort('mileage')" class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider cursor-pointer hover:text-teal-600 select-none">
+                            Mileage <span class="text-teal-600" x-text="sortIcon('mileage')"></span>
+                        </th>
+                        <th class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider">MOT</th>
+                        <th class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider">Tax</th>
+                        <th class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider">Notes</th>
+                        <th class="px-3 py-3 font-semibold text-xs uppercase text-slate-500 tracking-wider">Link</th>
+                        <th class="px-3 py-3 w-24 text-right font-semibold text-xs uppercase text-slate-500 tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-for="car in filteredCars" :key="car.id">
+                        <tr class="hover:bg-teal-50/40 transition-colors">
+                            <td class="px-3 py-2.5 text-center">
+                                <button @click="toggleStar(car)" class="hover:scale-110 transition-transform cursor-pointer" :class="car.starred ? 'opacity-100' : 'opacity-30 hover:opacity-60'" x-text="car.starred ? '⭐' : '☆'"></button>
+                            </td>
+                            <td class="px-3 py-2.5 font-semibold font-mono text-teal-700 whitespace-nowrap" x-text="car.registration"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap" x-text="car.make || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap" x-text="car.year || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap" x-text="car.fuelType || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600" x-text="fmtEngineL(car.engineCapacity) || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap" x-text="car.colour || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap font-mono font-medium" x-text="fmtPrice(car.price) || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600" x-text="fmtMileage(car.mileage) || '—'"></td>
+                            <td class="px-3 py-2.5 whitespace-nowrap text-xs">
+                                <span :class="car.motStatus === 'Valid' ? 'text-emerald-600' : 'text-red-500'" x-text="car.motStatus || '—'"></span>
+                                <template x-if="car.motExpiry">
+                                    <span class="text-slate-400 ml-1" x-text="'(' + fmtDate(car.motExpiry) + ')'"></span>
+                                </template>
+                            </td>
+                            <td class="px-3 py-2.5 whitespace-nowrap text-xs">
+                                <span :class="car.taxStatus === 'Taxed' ? 'text-emerald-600' : 'text-amber-500'" x-text="car.taxStatus || '—'"></span>
+                            </td>
+                            <td class="px-3 py-2.5 max-w-[200px] truncate text-slate-500 italic text-xs" x-text="car.notes || ''"></td>
+                            <td class="px-3 py-2.5">
+                                <template x-if="car.url">
+                                    <a :href="car.url" target="_blank" class="text-teal-600 hover:underline text-xs">View →</a>
+                                </template>
+                            </td>
+                            <td class="px-3 py-2.5 text-right">
+                                <div class="flex gap-1 justify-end">
+                                    <button @click="openEdit(car)" class="p-1 rounded hover:bg-teal-100 text-slate-400 hover:text-teal-600 transition cursor-pointer" title="Edit">✏️</button>
+                                    <button @click="deleteCar(car.id)" class="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition cursor-pointer" title="Delete">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="filteredCars.length === 0">
+                        <tr>
+                            <td colspan="14" class="px-3 py-16 text-center text-slate-400">
+                                <div class="text-3xl mb-2">🚗</div>
+                                <p class="font-medium" x-text="cars.length === 0 ? 'No cars yet — use Quick Add above' : 'No cars match your search'"></p>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ═══ Modal ═══ -->
+    <div x-show="modalOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" @click.self="closeModal()" @keydown.escape.window="closeModal()">
+        <div x-show="modalOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+             class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <h2 class="text-lg font-bold text-slate-900" x-text="editing ? 'Edit Car' : 'Add New Car'"></h2>
+                <button @click="closeModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded hover:bg-slate-100 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
+
+                    <!-- Registration + DVLA lookup -->
+                    <div class="sm:col-span-2 lg:col-span-3 flex flex-col sm:flex-row gap-3 items-end bg-teal-50 p-4 rounded-lg border border-teal-100">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Registration <span class="text-red-400">*</span></label>
+                            <input type="text" x-model="form.registration" placeholder="AB12 CDE" maxlength="10"
+                                   class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm uppercase font-mono focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                        </div>
+                        <button @click="lookupDvla()" :disabled="loading" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer">
+                            🔍 DVLA Lookup
+                        </button>
+                    </div>
+
+                    <!-- DVLA message -->
+                    <template x-if="dvlaMsg">
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <p class="text-sm text-teal-700 bg-teal-50 px-3 py-1.5 rounded-lg inline-block" x-text="dvlaMsg"></p>
+                        </div>
+                    </template>
+
+                    <!-- DVLA fields (read-only-ish) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Make</label>
+                        <input type="text" x-model="form.make" placeholder="e.g. FORD" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Year</label>
+                        <input type="text" x-model="form.year" placeholder="2015" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Fuel</label>
+                        <input type="text" x-model="form.fuelType" placeholder="PETROL" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Engine (cc)</label>
+                        <input type="number" x-model="form.engineCapacity" placeholder="1596" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Colour</label>
+                        <input type="text" x-model="form.colour" placeholder="SILVER" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">CO₂ (g/km)</label>
+                        <input type="number" x-model="form.co2" placeholder="149" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+
+                    <!-- Tax Info -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Tax Status</label>
+                        <input type="text" x-model="form.taxStatus" placeholder="e.g. Taxed" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none font-medium" :class="form.taxStatus === 'Taxed' ? 'text-emerald-700' : 'text-slate-700'">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Tax Due</label>
+                        <input type="date" x-model="form.taxDueDate" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Annual Tax</label>
+                        <div class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 font-bold text-teal-700 flex justify-between items-center h-[38px]">
+                            <span x-text="getTaxRate() ? '£' + getTaxRate().annual : '—'"></span>
+                            <span class="text-[10px] text-slate-400 font-medium uppercase tracking-tighter" x-text="getTaxRate() ? getTaxRate().band : ''"></span>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="sm:col-span-2 lg:col-span-3 border-t border-slate-100 my-1"></div>
+
+                    <!-- User fields -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Price (£)</label>
+                        <input type="number" x-model="form.price" placeholder="9990" step="1" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Mileage</label>
+                        <input type="number" x-model="form.mileage" placeholder="87400" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none font-mono">
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-1">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Listing URL</label>
+                        <input type="url" x-model="form.url" placeholder="https://…" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none text-teal-700 truncate">
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Notes</label>
+                        <textarea x-model="form.notes" rows="2" placeholder="Full service history, clean MOT…" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none resize-y"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-slate-100 flex flex-wrap-reverse sm:flex-nowrap justify-end gap-3 bg-slate-50">
+                <button x-show="editing" @click="deleteCar(form.id)" class="mr-auto px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition cursor-pointer">Delete</button>
+                <button @click="closeModal()" class="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-100 transition cursor-pointer">Cancel</button>
+                <button @click="save()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">Save</button>
+            </div>
+        </div>
+    </div>
+
+</div>
 </body>
 </html>

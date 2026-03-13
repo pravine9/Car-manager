@@ -1,97 +1,48 @@
-# Car Tools - Vehicle Checker & Link Manager
+# Car Tracker
 
-<!-- Updated for GitHub Pages deployment -->
+Track and shortlist cars you're looking to buy, with automatic DVLA data.
 
-A comprehensive web application for managing car-related information with powerful features for tracking and evaluating vehicles.
+## How it works
 
-## Features
+1. Enter a **registration** (+ optional listing URL) in the Quick Add bar
+2. The app calls the DVLA API to fill in make, year, fuel, engine, colour, MOT/tax status
+3. Add **price**, **mileage**, and **notes** from the listing
+4. Save — the car appears in a sortable, searchable table
+5. ⭐ **Star** cars to shortlist your favourites
 
-### 1. Vehicle Score Checker
-- Enter a UK car registration number
-- Click "Check Score" to open VehicleScore.co.uk in a new tab
-- Automatically formats the registration and opens the correct URL
+## Deployment
 
-### 2. AutoTrader URL Cleaner
-- Paste a long AutoTrader or Motors.co.uk URL with all query parameters
-- Click "Clean URL" to get the shortened, clean version
-- Copy the cleaned URL with one click
+### Vercel (Recommended)
+This app is ready for Vercel. Vercel's "Serverless Functions" replace `server.js` to keep your API key secure.
 
-### 3. Car Management System
-- **Quick Add**: Quickly add cars with just URL and registration
-- **Full Details**: Add comprehensive car information including:
-  - Registration, year, price, mileage
-  - Engine size, transmission, fuel type
-  - Colors, insurance group, rating
-  - Contact information, comments
-  - Vehicle score and website links
-- **Card & Table Views**: Switch between visual card view and detailed table view
-- **Search & Filter**: Search cars and filter by star status, flags, transmission, and fuel type
-- **Sort**: Sort by any column in table view
-- **Star & Flag**: Mark favorites and flag items for attention
-- **Export/Import**: Export your data as JSON or import existing data
-- All data is saved automatically using IndexedDB (with localStorage fallback)
+1. Create a new project on [Vercel](https://vercel.com).
+2. Connect your repository.
+3. In **Settings -> Environment Variables**, add:
+   - `DVLA_API_KEY`: your_dvla_api_key_here
+4. Deploy!
 
-## Usage
+### GitHub Pages
+You can host the static files, but **DVLA lookup will not work** because GitHub Pages does not support server-side keys.
 
-### Local Development
-1. Open `index.html` in your web browser
-2. Use any of the features as needed
-3. Your data will persist even after closing and reopening the browser
+## Stack
 
-### GitHub Pages Deployment
-
-This project is configured for GitHub Pages deployment. To deploy:
-
-1. **Create a GitHub repository**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-   git push -u origin main
-   ```
-
-2. **Enable GitHub Pages**
-   - Go to your repository on GitHub
-   - Click on **Settings**
-   - Scroll down to **Pages** section
-   - Under **Source**, select `main` branch (or `master` if that's your default)
-   - Select `/ (root)` as the folder
-   - Click **Save**
-
-3. **Access your site**
-   - Your site will be available at: `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`
-   - GitHub Pages may take a few minutes to build and deploy
-
-4. **Initial Data**
-   - The app automatically loads `initial-data.json` on first visit if no existing data is found
-   - Users can still export/import their own data using the built-in features
+- **Tailwind CSS v4** — styling
+- **Alpine.js** — reactive UI (CDN)
+- **Dexie.js** — IndexedDB storage (CDN)
+- **Express** — local dev server + DVLA proxy
 
 ## Files
 
-- `index.html` - Main HTML structure
-- `styles.css` - Styling and layout
-- `script.js` - Vehicle checker and URL cleaner functionality
-- `carManager.js` - Car management system (add, edit, delete, search, filter)
-- `storage.js` - IndexedDB storage layer with localStorage fallback
-- `utils.js` - Shared utility functions
-- `initial-data.json` - Pre-loaded car data (loaded automatically on first visit)
+| File | Purpose |
+|---|---|
+| `index.html` | UI (Alpine.js directives) |
+| `app.js` | Dexie DB + Alpine component |
+| `server.js` | Express server + DVLA proxy |
+| `src/input.css` | Tailwind source |
+| `styles.css` | Generated Tailwind output |
+| `vehicleTaxRates.js` | UK VED rate lookup |
+| `docs/` | API reference docs |
 
-## Browser Compatibility
+## Data
 
-Works in all modern browsers that support:
-- IndexedDB (with localStorage fallback)
-- ES6 JavaScript features
-- CSS Grid and Flexbox
-- Fetch API
-
-## Data Storage
-
-- **Primary**: IndexedDB (persists across browser sessions and different ports)
-- **Fallback**: localStorage (for older browsers or when IndexedDB fails)
-- **Export/Import**: JSON format for easy data portability
-
-## License
-
-Free to use and modify as needed.
+All cars are stored locally in IndexedDB (via Dexie). Use **Export/Import** (JSON) for backups.
