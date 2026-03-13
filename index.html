@@ -7,7 +7,7 @@
     <meta name="description" content="Track and shortlist cars you're looking to buy, with DVLA data auto-fill.">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script defer src="https://cdn.jsdelivr.net/npm/dexie@4/dist/dexie.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script defer src="vehicleTaxRates.js"></script>
     <script defer src="app.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
@@ -19,7 +19,11 @@
     <!-- ═══ Header ═══ -->
     <header class="text-center mb-8">
         <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1">🚗 Car Tracker</h1>
-        <p class="text-slate-500 text-sm font-medium">Track &amp; shortlist cars with DVLA data</p>
+        <p class="text-slate-500 text-sm font-medium mb-3">Track &amp; shortlist cars with DVLA data</p>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-[10px] font-bold uppercase tracking-widest border border-teal-100/50 shadow-sm">
+            <svg class="w-2.5 h-2.5" width="10" height="10" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+            <span x-text="collection"></span>
+        </div>
     </header>
 
     <!-- ═══ Quick Add ═══ -->

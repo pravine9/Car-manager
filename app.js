@@ -1,12 +1,13 @@
 /* ──────────────────────────────────────────────────
-   app.js — Car Tracker (Alpine.js + Dexie.js)
+   app.js — Car Tracker (Alpine.js + Vercel Postgres)
    ────────────────────────────────────────────────── */
 
-// ── Dexie DB ──
-const db = new Dexie('CarTrackerDB');
-db.version(1).stores({
-    cars: '++id, registration, timestamp'
-});
+// ── Collection Detection ──
+// Detect collection from URL path (e.g. /my-ford-collection)
+const getCollectionName = () => {
+    const path = window.location.pathname.replace(/^\/|\/$/g, '');
+    return path || 'main';
+};
 
 // ── DVLA helper ──
 async function dvlaLookup(reg) {
@@ -78,6 +79,7 @@ document.addEventListener('alpine:init', () => {
         editing: false,
         loading: false,
         dvlaMsg: '',
+        collection: getCollectionName(),
 
         // Form
         form: {
@@ -111,7 +113,17 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadCars() {
-            this.cars = await db.cars.toArray();
+            this.loading = true;
+            try {
+                const res = await fetch(`/api/cars?collection=${this.collection}`);
+                if (res.ok) {
+                    this.cars = await res.json();
+                }
+            } catch (err) {
+                console.error('Load failed:', err);
+            } finally {
+                this.loading = false;
+            }
         },
 
         // ── Computed: filtered & sorted cars ──
@@ -170,7 +182,7 @@ document.addEventListener('alpine:init', () => {
             const norm = reg.replace(/\s+/g, '');
             const exists = this.cars.find(c => (c.registration || '').replace(/\s+/g, '') === norm);
             if (exists) {
-                if (confirm('This registration already exists. Edit it?')) {
+                if (confirm('This registration already exists in this collection. Edit it?')) {
                     this.openEdit(exists);
                     this.quickReg = '';
                     this.quickUrl = '';
@@ -220,6 +232,15 @@ document.addEventListener('alpine:init', () => {
         // ── Modal: Edit ──
         openEdit(car) {
             this.form = { ...car };
+            // Fix field names for DB (snake_case from API -> camelCase for form)
+            if (car.engine_capacity) this.form.engineCapacity = car.engine_capacity;
+            if (car.fuel_type) this.form.fuelType = car.fuel_type;
+            if (car.mot_status) this.form.motStatus = car.mot_status;
+            if (car.mot_expiry) this.form.motExpiry = car.mot_expiry.split('T')[0];
+            if (car.tax_status) this.form.taxStatus = car.tax_status;
+            if (car.tax_due_date) this.form.taxDueDate = car.tax_due_date.split('T')[0];
+            if (car.month_of_first_registration) this.form.monthOfFirstRegistration = car.month_of_first_registration;
+            
             this.editing = true;
             this.dvlaMsg = '';
             this.modalOpen = true;
@@ -240,31 +261,61 @@ document.addEventListener('alpine:init', () => {
             if (data.price) data.price = parseFloat(data.price) || null;
             if (data.mileage) data.mileage = parseFloat(data.mileage) || null;
 
-            if (this.editing && data.id) {
-                await db.cars.put(data);
-            } else {
-                delete data.id;
-                data.timestamp = new Date().toISOString();
-                data.starred = false;
-                await db.cars.add(data);
+            this.loading = true;
+            try {
+                const res = await fetch(`/api/cars?collection=${this.collection}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                if (res.ok) {
+                    await this.loadCars();
+                    this.closeModal();
+                } else {
+                    const err = await res.json();
+                    alert('Save failed: ' + (err.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Save failed — check console.');
+                console.error(err);
+            } finally {
+                this.loading = false;
             }
-            await this.loadCars();
-            this.closeModal();
         },
 
         // ── Delete ──
         async deleteCar(id) {
-            if (!confirm('Delete this car?')) return;
-            await db.cars.delete(id);
-            await this.loadCars();
-            if (this.modalOpen && this.form.id === id) this.closeModal();
+            if (!confirm('Delete this car from the server?')) return;
+            this.loading = true;
+            try {
+                const res = await fetch(`/api/cars?collection=${this.collection}&id=${id}`, {
+                    method: 'DELETE',
+                });
+                if (res.ok) {
+                    await this.loadCars();
+                    if (this.modalOpen && this.form.id === id) this.closeModal();
+                }
+            } catch (err) {
+                console.error('Delete failed:', err);
+            } finally {
+                this.loading = false;
+            }
         },
 
         // ── Star ──
         async toggleStar(car) {
+            const old = car.starred;
             car.starred = !car.starred;
-            await db.cars.put(car);
-            await this.loadCars();
+            try {
+                const res = await fetch(`/api/cars?collection=${this.collection}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: car.id, starred: car.starred }),
+                });
+                if (!res.ok) car.starred = old; // Revert on failure
+            } catch {
+                car.starred = old;
+            }
         },
 
         // ── DVLA Lookup (from modal) ──
@@ -276,6 +327,7 @@ document.addEventListener('alpine:init', () => {
             const api = await dvlaLookup(reg);
             this.loading = false;
             if (!api) { this.dvlaMsg = 'Not found or API unavailable.'; return; }
+            
             this.form.make = api.make || this.form.make;
             this.form.colour = api.colour || this.form.colour;
             this.form.year = api.yearOfManufacture != null ? String(api.yearOfManufacture) : this.form.year;
@@ -287,6 +339,7 @@ document.addEventListener('alpine:init', () => {
             this.form.taxDueDate = api.taxDueDate || '';
             this.form.monthOfFirstRegistration = api.monthOfFirstRegistration || '';
             this.form.co2 = api.co2Emissions || '';
+            
             const parts = [];
             if (api.motStatus) parts.push(`MOT: ${api.motStatus}`);
             if (api.motExpiryDate) parts.push(`expires ${fmtDate(api.motExpiryDate)}`);
@@ -296,38 +349,40 @@ document.addEventListener('alpine:init', () => {
 
         // ── Export ──
         async exportData() {
-            const cars = await db.cars.toArray();
-            const blob = new Blob([JSON.stringify({ version: '2.0', exported: new Date().toISOString(), cars }, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify({ 
+                version: '3.0 (postgres)', 
+                collection: this.collection,
+                exported: new Date().toISOString(), 
+                cars: this.cars 
+            }, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `car-tracker-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `car-tracker-${this.collection}-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             URL.revokeObjectURL(a.href);
         },
 
-        // ── Import ──
+        // ── Import (Note: would need bulk API for large files) ──
         async importData(event) {
             const file = event.target.files?.[0];
             if (!file) return;
-            if (!confirm('Import cars from this file?')) { event.target.value = ''; return; }
+            if (!confirm(`Import cars into "${this.collection}"?`)) { event.target.value = ''; return; }
             try {
                 const json = JSON.parse(await file.text());
                 const incoming = json.cars || [];
-                const existingRegs = new Set(this.cars.map(c => (c.registration || '').replace(/\s+/g, '')));
-                let imported = 0, skipped = 0;
+                alert(`Importing ${incoming.length} cars... please wait.`);
                 for (const car of incoming) {
-                    const reg = (car.registration || '').replace(/\s+/g, '');
-                    if (reg && existingRegs.has(reg)) { skipped++; continue; }
-                    delete car.id;
-                    car.timestamp = car.timestamp || new Date().toISOString();
-                    await db.cars.add(car);
-                    if (reg) existingRegs.add(reg);
-                    imported++;
+                    delete car.id; // Treat as new entries
+                    await fetch(`/api/cars?collection=${this.collection}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(car),
+                    });
                 }
                 await this.loadCars();
-                alert(`Done! ${imported} imported, ${skipped} skipped (duplicates).`);
+                alert('Import finished.');
             } catch (err) {
-                alert('Import failed — check file format.');
+                alert('Import failed.');
                 console.error(err);
             }
             event.target.value = '';
