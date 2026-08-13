@@ -19,6 +19,11 @@ app.use(express.static(path.join(__dirname)));
 // JSON body for API
 app.use(express.json());
 
+// Pretty URL for the standalone bulk page
+app.get('/bulk', (req, res) => {
+  res.sendFile(path.join(__dirname, 'bulk.html'));
+});
+
 // Proxy: POST /api/vehicle-lookup -> DVLA VES API
 app.post('/api/vehicle-lookup', async (req, res) => {
   if (!DVLA_API_KEY || !DVLA_API_KEY.trim()) {

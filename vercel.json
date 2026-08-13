@@ -6,7 +6,11 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/bulk",
+      "destination": "/bulk.html"
+    },
+    {
+      "source": "/((?!api/|bulk).*)",
       "destination": "/index.html"
     }
   ]

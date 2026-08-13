@@ -107,14 +107,6 @@ document.addEventListener('alpine:init', () => {
         quickReg: '',
         quickUrl: '',
 
-        // Bulk DVLA → CSV
-        bulkOpen: false,
-        bulkInput: '',
-        bulkRunning: false,
-        bulkResults: [],
-        bulkDone: 0,
-        bulkTotal: 0,
-
         // Init
         async init() {
             await this.loadCars();
@@ -394,90 +386,6 @@ document.addEventListener('alpine:init', () => {
                 console.error(err);
             }
             event.target.value = '';
-        },
-
-        // ── Bulk DVLA → CSV ──
-        // Default column set per the DVLA vehicle parser spec.
-        bulkColumns: [
-            { header: 'Registration', key: 'registrationNumber' },
-            { header: 'Make', key: 'make' },
-            { header: 'Colour', key: 'colour' },
-            { header: 'Fuel Type', key: 'fuelType' },
-            { header: 'Engine Capacity (cc)', key: 'engineCapacity' },
-            { header: 'CO2 Emissions', key: 'co2Emissions' },
-            { header: 'Euro Status', key: 'euroStatus' },
-            { header: 'Year of Manufacture', key: 'yearOfManufacture' },
-            { header: 'Month of First Registration', key: 'monthOfFirstRegistration' },
-        ],
-
-        openBulk() {
-            this.bulkInput = '';
-            this.bulkResults = [];
-            this.bulkDone = 0;
-            this.bulkTotal = 0;
-            this.bulkRunning = false;
-            this.bulkOpen = true;
-        },
-
-        closeBulk() {
-            if (this.bulkRunning) return;
-            this.bulkOpen = false;
-        },
-
-        parseRegList(text) {
-            const seen = new Set();
-            const list = [];
-            for (const raw of (text || '').split(/[\n\r,;\t]+/)) {
-                const reg = raw.trim().toUpperCase().replace(/\s+/g, '');
-                if (!reg || seen.has(reg)) continue;
-                seen.add(reg);
-                list.push(reg);
-            }
-            return list;
-        },
-
-        async runBulkLookup() {
-            const regs = this.parseRegList(this.bulkInput);
-            if (regs.length === 0) { alert('Paste at least one registration.'); return; }
-
-            this.bulkRunning = true;
-            this.bulkResults = [];
-            this.bulkTotal = regs.length;
-            this.bulkDone = 0;
-
-            for (const reg of regs) {
-                const api = await dvlaLookup(reg);
-                if (api) {
-                    this.bulkResults.push({ reg, ok: true, data: api });
-                } else {
-                    this.bulkResults.push({ reg, ok: false, data: { registrationNumber: reg } });
-                }
-                this.bulkDone++;
-            }
-
-            this.bulkRunning = false;
-        },
-
-        csvCell(v) {
-            if (v == null) return '';
-            const s = String(v);
-            if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-            return s;
-        },
-
-        downloadBulkCsv() {
-            if (this.bulkResults.length === 0) return;
-            const rows = [this.bulkColumns.map(c => c.header).join(',')];
-            for (const r of this.bulkResults) {
-                rows.push(this.bulkColumns.map(c => this.csvCell(r.data?.[c.key])).join(','));
-            }
-            // utf-8-sig BOM so Excel opens it correctly
-            const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `dvla-vehicles-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(a.href);
         },
 
         // ── Reset form ──

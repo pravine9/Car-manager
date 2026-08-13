@@ -56,7 +56,7 @@
         </div>
         <div class="flex gap-2">
             <button @click="openAdd()" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">+ Add</button>
-            <button @click="openBulk()" class="px-3 py-1.5 border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 text-sm font-semibold rounded-lg transition cursor-pointer">Bulk DVLA → CSV</button>
+            <a href="/bulk" class="px-3 py-1.5 border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 text-sm font-semibold rounded-lg transition cursor-pointer">Bulk DVLA → CSV</a>
             <button @click="exportData()" class="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-sm font-medium rounded-lg transition cursor-pointer">Export</button>
             <label class="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 text-sm font-medium rounded-lg transition cursor-pointer">
                 Import
@@ -261,86 +261,6 @@
                 <button x-show="editing" @click="deleteCar(form.id)" class="mr-auto px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition cursor-pointer">Delete</button>
                 <button @click="closeModal()" class="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-100 transition cursor-pointer">Cancel</button>
                 <button @click="save()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══ Bulk DVLA → CSV Modal ═══ -->
-    <div x-show="bulkOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" @click.self="closeBulk()" @keydown.escape.window="closeBulk()" style="display:none">
-        <div x-show="bulkOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-             class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
-
-            <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                <h2 class="text-lg font-bold text-slate-900">Bulk DVLA Lookup → CSV</h2>
-                <button @click="closeBulk()" :disabled="bulkRunning" class="text-slate-400 hover:text-slate-600 disabled:opacity-30 cursor-pointer p-1 rounded hover:bg-slate-100 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Registration plates</label>
-                    <p class="text-xs text-slate-400 mb-2">Paste one per line (or separated by commas/spaces). Each is looked up against DVLA.</p>
-                    <textarea x-model="bulkInput" :disabled="bulkRunning" rows="7"
-                              placeholder="HJ15 CDO&#10;AB12 CDE&#10;LP68 XYZ"
-                              class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none resize-y disabled:bg-slate-50"></textarea>
-                </div>
-
-                <template x-if="bulkRunning || bulkResults.length">
-                    <div>
-                        <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
-                            <span x-text="bulkRunning ? 'Looking up…' : 'Done'"></span>
-                            <span x-text="bulkDone + ' / ' + bulkTotal"></span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                            <div class="bg-teal-600 h-2 transition-all duration-200" :style="`width: ${bulkTotal ? (bulkDone / bulkTotal * 100) : 0}%`"></div>
-                        </div>
-                    </div>
-                </template>
-
-                <template x-if="bulkResults.length">
-                    <div class="border border-slate-200 rounded-lg overflow-hidden">
-                        <div class="overflow-x-auto" style="max-height:30vh; overflow-y:auto;">
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-50 border-b border-slate-200 sticky top-0">
-                                    <tr>
-                                        <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Reg</th>
-                                        <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Make</th>
-                                        <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Fuel</th>
-                                        <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Year</th>
-                                        <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider text-right">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    <template x-for="r in bulkResults" :key="r.reg">
-                                        <tr>
-                                            <td class="px-3 py-1.5 font-mono font-semibold text-teal-700" x-text="r.reg"></td>
-                                            <td class="px-3 py-1.5" x-text="r.data.make || '—'"></td>
-                                            <td class="px-3 py-1.5" x-text="r.data.fuelType || '—'"></td>
-                                            <td class="px-3 py-1.5" x-text="r.data.yearOfManufacture || '—'"></td>
-                                            <td class="px-3 py-1.5 text-right">
-                                                <span :class="r.ok ? 'text-emerald-600' : 'text-red-500'" x-text="r.ok ? 'OK' : 'Not found'"></span>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-100 flex flex-wrap-reverse sm:flex-nowrap justify-end gap-3 bg-slate-50">
-                <button @click="closeBulk()" :disabled="bulkRunning" class="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-50 transition cursor-pointer">Close</button>
-                <button @click="runBulkLookup()" :disabled="bulkRunning" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">
-                    <span x-show="!bulkRunning">Look up all</span>
-                    <span x-show="bulkRunning">Looking up…</span>
-                </button>
-                <button @click="downloadBulkCsv()" :disabled="bulkRunning || !bulkResults.length" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">Download CSV</button>
             </div>
         </div>
     </div>

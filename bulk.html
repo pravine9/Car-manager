@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk DVLA Lookup → CSV</title>
+    <meta name="description" content="Paste registration plates, look each up against the DVLA Vehicle Enquiry Service, and download the results as a CSV.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script defer src="bulk.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<div x-data="bulkDvla" class="max-w-[1100px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
+
+    <!-- ═══ Header ═══ -->
+    <header class="mb-8">
+        <a href="/" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-teal-600 transition mb-4">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            Back to Car Tracker
+        </a>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1">Bulk DVLA Lookup → CSV</h1>
+        <p class="text-slate-500 text-sm font-medium">Paste registration plates, look each up against the DVLA Vehicle Enquiry Service, and download every returned field as a CSV.</p>
+    </header>
+
+    <!-- ═══ Input ═══ -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-6">
+        <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Registration plates</label>
+        <p class="text-xs text-slate-400 mb-3">One per line (or separated by commas / semicolons). Duplicates and blanks are ignored.</p>
+        <textarea x-model="input" :disabled="running" rows="8"
+                  placeholder="HJ15 CDO&#10;AB12 CDE&#10;LP68 XYZ"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none resize-y disabled:bg-slate-50"></textarea>
+
+        <div class="flex flex-wrap gap-3 mt-4">
+            <button @click="runLookup()" :disabled="running"
+                    class="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">
+                <span x-show="!running">Look up all</span>
+                <span x-show="running">Looking up…</span>
+            </button>
+            <button @click="downloadCsv()" :disabled="!canDownload"
+                    class="px-5 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition shadow-sm cursor-pointer">
+                Download CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══ Progress + Results ═══ -->
+    <template x-if="running || results.length">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                <span x-text="running ? 'Looking up…' : 'Done'"></span>
+                <span x-text="done + ' / ' + total"></span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-6">
+                <div class="bg-teal-600 h-2 transition-all duration-200" :style="`width: ${total ? (done / total * 100) : 0}%`"></div>
+            </div>
+
+            <template x-if="results.length">
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto" style="max-height:55vh; overflow-y:auto;">
+                        <table class="w-full text-xs text-left whitespace-nowrap">
+                            <thead class="bg-slate-50 border-b border-slate-200 sticky top-0">
+                                <tr>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Reg</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Make</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Colour</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Fuel</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Year</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">Tax</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider">MOT</th>
+                                    <th class="px-3 py-2 font-semibold uppercase text-slate-500 tracking-wider text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="r in results" :key="r.reg">
+                                    <tr>
+                                        <td class="px-3 py-1.5 font-mono font-semibold text-teal-700" x-text="r.reg"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.make || '—'"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.colour || '—'"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.fuelType || '—'"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.yearOfManufacture || '—'"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.taxStatus || '—'"></td>
+                                        <td class="px-3 py-1.5" x-text="r.data.motStatus || '—'"></td>
+                                        <td class="px-3 py-1.5 text-right">
+                                            <span :class="r.ok ? 'text-emerald-600' : 'text-red-500'" x-text="r.ok ? 'OK' : 'Not found'"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+            <p class="text-[11px] text-slate-400 mt-3">Preview shows key columns only. The CSV download includes all <span x-text="columns.length"></span> DVLA fields.</p>
+        </div>
+    </template>
+
+</div>
+</body>
+</html>
