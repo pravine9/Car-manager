@@ -1,0 +1,16 @@
+# Python dependencies for api/ocr.py (the /tools plate reader). The Node functions in api/ do not use this file.
+[project]
+name = "car-tools-ocr"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "rapidocr_onnxruntime==1.2.3",
+    "opencv-python-headless",
+    "numpy",
+    "pillow",
+]
+
+[tool.uv]
+# rapidocr asks for opencv-python, which needs libGL (not on Vercel's Linux).
+# Use opencv-python-headless (same cv2 module, no GUI libraries) in its place.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]

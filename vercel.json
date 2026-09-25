@@ -1,12 +1,29 @@
 {
   "version": 2,
+  "functions": {
+    "api/ocr.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{tools/**,docs/**,src/**,node_modules/**,*.html,*.css,*.md}"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/tools",
+      "destination": "/tools/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/tools/",
+      "destination": "/tools/index.html"
+    },
+    {
+      "source": "/((?!api/|tools/).*)",
       "destination": "/index.html"
     }
   ]

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Tools</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 Car Tools</h1>
+            <p>Check, compare and shortlist used cars</p>
+        </header>
+
+        <!-- Feature 1: VehicleScore Checker (type a plate, or drop/paste a car photo anywhere) -->
+        <section class="feature-section plate-section">
+            <h2>1. Vehicle Score</h2>
+            <div class="plate-row">
+                <input type="text" id="registrationInput" class="plate-input" placeholder="AB12 CDE" maxlength="10" autocomplete="off" spellcheck="false">
+                <button id="checkScoreBtn" class="btn btn-primary">Check Score</button>
+            </div>
+            <p id="plateDropZone" class="plate-hint"><span id="plateStatus">Drop or paste a car photo to read the plate</span></p>
+        </section>
+
+        <!-- Feature 2: URL Cleaner -->
+        <section class="feature-section">
+            <h2>2. Listing Link</h2>
+            <div class="input-group">
+                <div style="display: flex; gap: 5px; flex: 1;">
+                    <input 
+                        type="text" 
+                        id="autotraderUrlInput" 
+                        placeholder="Paste an Autotrader or Motors.co.uk link"
+                        style="flex: 1;"
+                    >
+                    <button id="pasteUrlBtn" class="btn-paste" title="Paste from clipboard">📋</button>
+                </div>
+                <div class="link-buttons">
+                    <button id="openUrlBtn" class="btn btn-secondary">Open</button>
+                    <button id="copyUrlBtn" class="btn btn-secondary">Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature 3: Quick Add (Cmd+K from anywhere: DVLA lookup, then Enter to add) -->
+        <section class="feature-section quick-section">
+            <h2>3. Quick Add</h2>
+            <div class="quick-row">
+                <input type="text" id="quickRegInput" class="quick-reg" placeholder="Registration" maxlength="10" autocomplete="off" spellcheck="false">
+                <input type="text" id="quickUrlInput" class="quick-url" placeholder="Listing URL (optional)" autocomplete="off">
+                <button id="quickAddBtn" class="btn btn-primary">Add <kbd>⌘K</kbd></button>
+            </div>
+        </section>
+
+        <!-- Feature 4: Car Management (Unified) -->
+        <section class="feature-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <h2>4. Car Management</h2>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input 
+                        type="text" 
+                        id="searchCarsInput" 
+                        placeholder="Search cars..." 
+                        style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em;"
+                    >
+                    <button id="addNewCarBtn" class="btn btn-primary">+ Add Full Details</button>
+                    <button id="exportDataBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9em;">Export Data</button>
+                    <label for="importDataInput" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9em; cursor: pointer; margin: 0;">
+                        Import Data
+                        <input type="file" id="importDataInput" accept=".json" style="display: none;">
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Dataset Selector -->
+            <div class="dataset-selector" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label for="datasetSelect" style="font-weight: 600; color: #666; font-size: 0.95em;">Load Dataset:</label>
+                    <select id="datasetSelect" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer; background: white; min-width: 200px;">
+                        <option value="none">No dataset (start empty)</option>
+                        <option value="dataset-1.json">Dataset 1 (19 cars)</option>
+                        <option value="dataset-2.json">Dataset 2 (10 cars)</option>
+                    </select>
+                    <button id="loadDatasetBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;">Load Dataset</button>
+                    <span id="datasetStatus" style="color: #666; font-size: 0.85em; font-style: italic;"></span>
+                </div>
+            </div>
+            
+            <!-- View Toggle and Filters -->
+            <div class="view-controls" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-weight: 600; color: #666;">View:</span>
+                        <button id="tableViewBtn" class="btn-view-toggle active" data-view="table">Table View</button>
+                        <button id="cardViewBtn" class="btn-view-toggle" data-view="card">Card View</button>
+                    </div>
+                    <div id="viewStats" style="color: #666; font-size: 0.9em;">
+                        <span id="carsCount">0</span> cars
+                    </div>
+                </div>
+                
+                <!-- Filters (shown in both views) -->
+                <div class="filters-section" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <span style="font-weight: 600; color: #666; margin-right: 5px;">Filters:</span>
+                    <select id="filterStar" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
+                        <option value="all">All Stars</option>
+                        <option value="starred">Starred (Shortlist)</option>
+                        <option value="unstarred">Not Starred</option>
+                    </select>
+                    <select id="filterFlag" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
+                        <option value="all">All Flags</option>
+                        <option value="flagged">Flagged</option>
+                        <option value="unflagged">No Flag</option>
+                    </select>
+                    <select id="filterTransmission" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
+                        <option value="all">All Transmission</option>
+                        <option value="Automatic">Automatic</option>
+                        <option value="Manual">Manual</option>
+                    </select>
+                    <select id="filterFuelType" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9em; cursor: pointer;">
+                        <option value="all">All Fuel Types</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                    </select>
+                    <button id="clearFiltersBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.9em;">Clear Filters</button>
+                </div>
+            </div>
+            
+            <!-- Car Details Form (initially hidden) -->
+            <div id="carDetailsForm" class="car-details-form" style="display: none;">
+                <h3 id="formTitle">Add New Car</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="carRegistration">Registration *</label>
+                        <input type="text" id="carRegistration" placeholder="e.g., CX66 NWO" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="carYear">Year</label>
+                        <input type="text" id="carYear" placeholder="e.g., 2016 or 65">
+                    </div>
+                    <div class="form-group">
+                        <label for="carSpec">Spec</label>
+                        <input type="text" id="carSpec" placeholder="TDI Ultra Sport S Tronic">
+                    </div>
+                    <div class="form-group">
+                        <label for="carPrice">Price (£)</label>
+                        <input type="number" id="carPrice" placeholder="9999.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="carEngineSize">Engine Size (L)</label>
+                        <input type="number" id="carEngineSize" placeholder="2.0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="carMileage">Mileage</label>
+                        <input type="number" id="carMileage" placeholder="87400" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="carTransmission">Transmission</label>
+                        <select id="carTransmission">
+                            <option value="Automatic" selected>Automatic</option>
+                            <option value="Manual">Manual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="carFuelType">Fuel Type</label>
+                        <select id="carFuelType">
+                            <option value="Petrol" selected>Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Hybrid">Hybrid</option>
+                            <option value="Electric">Electric</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="carColors">Exterior/Interior</label>
+                        <input type="text" id="carColors" placeholder="Silver/Black">
+                    </div>
+                    <div class="form-group">
+                        <label for="carInsuranceGroup">Insurance Group</label>
+                        <input type="number" id="carInsuranceGroup" placeholder="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="carRating">Rating</label>
+                        <select id="carRating">
+                            <option value="">No rating</option>
+                            <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                            <option value="4">⭐⭐⭐⭐ (4 - Very Good)</option>
+                            <option value="3">⭐⭐⭐ (3 - Good)</option>
+                            <option value="2">⭐⭐ (2 - Fair)</option>
+                            <option value="1">⭐ (1 - Poor)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="carContact">Contact/Dealer</label>
+                        <input type="text" id="carContact" placeholder="Dealer name or contact">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="carComments">Comments</label>
+                        <textarea id="carComments" rows="3" placeholder="Clean MOT, good service history..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="carVehicleScore">Vehicle Score Link</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="url" id="carVehicleScore" placeholder="https://vehiclescore.co.uk/..." style="flex: 1;">
+                            <button type="button" id="openVehicleScoreBtn" class="btn btn-secondary" style="white-space: nowrap;">Open Link</button>
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="carWebsiteLink">Website Link</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="url" id="carWebsiteLink" placeholder="https://www.autotrader.co.uk/..." style="flex: 1;">
+                            <button type="button" id="cleanWebsiteUrlBtn" class="btn btn-secondary" style="white-space: nowrap;">Clean URL</button>
+                            <button type="button" id="openWebsiteLinkBtn" class="btn btn-secondary" style="white-space: nowrap;">Open Link</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button id="saveCarBtn" class="btn btn-primary">Save Car</button>
+                    <button id="cancelCarBtn" class="btn btn-secondary">Cancel</button>
+                    <button id="deleteCarBtn" class="btn btn-danger" style="display: none;">Delete Car</button>
+                </div>
+            </div>
+
+            <!-- Cars List (Card View) -->
+            <div id="carsList" class="cars-list" style="display: none;">
+                <p class="empty-message" id="emptyCarsMessage">No cars added yet. Use Quick Add above or click "Add Full Details" to get started!</p>
+            </div>
+            
+            <!-- Cars Table (Table View) -->
+            <div id="carsTableContainer" class="cars-table-container">
+                <div class="table-wrapper" style="overflow-x: auto; overflow-y: visible; border: 2px solid #e0e0e0; border-radius: 8px; background: white;">
+                    <table id="carsTable" class="cars-table">
+                        <thead>
+                            <tr>
+                                <th class="sticky-col">⭐</th>
+                                <th class="sticky-col">🚩</th>
+                                <th class="sortable" data-column="registration">Registration <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="year">Year <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="spec">Spec <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="price">Price <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="mileage">Mileage <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="engineSize">Engine <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="transmission">Transmission <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="fuelType">Fuel <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="colors">Colors <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="insuranceGroup">Insurance Group <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="rating">Rating <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="contact">Contact <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-column="comments">Comments <span class="sort-indicator"></span></th>
+                                <th>Website</th>
+                                <th>Vehicle Score</th>
+                                <th class="sticky-col-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="carsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Floating Scroll to Top Button -->
+    <button id="scrollToTopBtn" class="scroll-to-top-btn" title="Scroll to top">↑</button>
+
+    <!-- Quick Add modal: DVLA details, Enter to add, Esc to close -->
+    <div id="quickModal" class="qa-backdrop" hidden>
+        <div class="qa-modal" role="dialog" aria-modal="true" aria-labelledby="qaPlate">
+            <div class="qa-head">
+                <div id="qaPlate" class="qa-plate"></div>
+                <div id="qaTitle" class="qa-title"></div>
+            </div>
+            <div id="qaBody" class="qa-body"></div>
+            <div class="qa-foot">
+                <span class="qa-keys"><kbd>Enter</kbd> <span id="qaEnterLabel">add</span> · <kbd>Esc</kbd> cancel</span>
+                <div class="qa-buttons">
+                    <button id="qaCancel" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="qaConfirm" class="btn btn-primary" type="button">Add car</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="storage.js?v=4"></script>
+    <script src="utils.js?v=4"></script>
+    <script src="script.js?v=6"></script>
+    <script src="carManager.js?v=4"></script>
+    <script src="plateReader.js?v=7"></script>
+    <script src="quickAdd.js?v=7"></script>
+</body>
+</html>
